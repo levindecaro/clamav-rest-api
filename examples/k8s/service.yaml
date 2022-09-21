@@ -1,0 +1,17 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: clamav-rest-api
+  namespace: cra
+spec:
+  ports:
+    - protocol: TCP
+      port: 19443
+      targetPort: 19443
+  selector:
+    app: cra
+  type: ClusterIP
+  sessionAffinity: None
+  ipFamilies:
+    - IPv4
+  ipFamilyPolicy: SingleStack

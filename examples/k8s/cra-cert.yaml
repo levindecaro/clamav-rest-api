@@ -1,0 +1,10 @@
+kind: Secret
+apiVersion: v1
+metadata:
+  name: cra-cert
+  namespace: cra
+data:
+  cert.pem: {}
+  key.pem: {}
+type: Opaque
+
