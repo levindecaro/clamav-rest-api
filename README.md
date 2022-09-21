@@ -1,57 +1,61 @@
 #### Overview
 
-This is a simple implementation of REST API for ClamAV virus scanner. You can use it to scan files uploaded by users, before they are saved or put into final destination, or to scan files on demand.
+This is a simple implementation of REST API for ClamAV virus scanner. You can use it to scan files uploaded by users, before they are saved or put into final destination, or to scan files on demand. 
+
+This product is a modification for a specific use case which deviate from the original author benzino77 implementation.
+https://github.com/benzino77/clamav-rest-api
+
 
 ![Animation](./docs/images/animation.gif)
 
-#### How to start clamav-rest-api?
+####  Deployment
 
-First of all you have to have running ClamAV instance configured to accept TCP connections from `clamav-rest-api` instances. For more details I will guide you to CalmAV documentation ([here](https://blog.clamav.net/2016/06/regarding-use-of-clamav-daemons-tcp.html) and [here](https://www.clamav.net/documents/configuration#clamdconf)) but it's enough to say that you need `TCPSocket 3310` and eventually `TCPAddr` in your `clamd.conf` file. The easiest way is to use docker image with ClamAV already configured. I'm using `mailu/clamav` docker [image](https://hub.docker.com/r/mailu/clamav) during tests and development.
+First of all you have to have running ClamAV instance configured to accept TCP connections from `clamav-rest-api` instances. For more details I will guide you to CalmAV documentation ([here](https://blog.clamav.net/2016/06/regarding-use-of-clamav-daemons-tcp.html) and [here](https://www.clamav.net/documents/configuration#clamdconf)) but it's enough to say that you need `TCPSocket 3310` and eventually `TCPAddr` in your `clamd.conf` file. The easiest way is to use sidecar image with ClamAV already configured from here https://github.com/levindecaro/clamav-docker or docker.io/levindecaro/clamav:v0.7
 
 **_Note_:**
-You have to give `mailu/clamav` couple of minutes to start because it needs to download new signatures from ClamAV servers (update its viruses database).
+You have to give couple of minutes to start/crashloopback because it needs to download new signatures from ClamAV servers (update its viruses database).
 
 **_Recommended_** way of using `clamav-rest-api` is to start it as docker container or on k8s cluster (see [Configuration](#Configuration) below):
 
 In [examples](./examples/k8s) directory there are kubernetes YAML files to create `configMap`, `deployments` and `services`. Just run `kubectl` command to create them in proper order:
 
+Before the deployment, you need prepare the certificates for TLS and the password authentication
+
+SSL Certificate
+```
+kind: Secret
+apiVersion: v1
+metadata:
+  name: cra-cert
+  namespace: cra
+data:
+  cert.pem: ### base64encoded certificate ###
+  key.pem: ### base64encoded private key ###
+type: Opaque
+```
+
+Credential
+```
+kind: Secret
+apiVersion: v1
+metadata:
+  name: cra-secret
+  namespace: cra
+data:
+  APP_USER: ### base64encoded-usernme ###
+  APP_USER_PASSWORD: ### base64encoded-password ###
+type: Opaque
+```
+
+Deployment
 ```bash
-kubectl apply -f cra-configmap.yml
-kubectl apply -f clamavd.yml
-kubectl apply -f cra.yml
+kubectl apply -f cra-cert.yaml
+kubectl apply -f cra-secret.yaml
+kubectl apply -f deployment.yaml
+kubectl apply -f service.yaml
 ```
 
-`clamav-rest-api` service is published on `nodePort` 30080. On cluster network it is available on port 3000.
-
-To start using clamav-rest-api on docker environment follow the steps below:
-
-```
-docker run -d -p 8080:8080 \
--e NODE_ENV=production \
--e APP_PORT=8080 \
--e APP_FORM_KEY=FILES \
--e CLAMD_IP=192.168.10.10 \
-benzino77/clamav-rest-api
-```
-
-or
-
-```
-docker run -d -p 8080:8080 -v /local/path/to/.env:/clamav-rest-api/.env benzino77/clamav-rest-api
-```
-
-or, if you are running docker in Swarm mode, you can use `configs`
-
-```
-docker config create cra /path/to/.env
-docker service create --name clamav-rest-api --publish published=8080,target=8080 --config src=cra,target="/clamav-rest-api/.env" benzino77/clamav-rest-api
-```
-
-There is also an [example](./examples/docker-compose.yml) how to run _full_ stack on docker Swarm (clamavd and clamav-rest-api combined):
-
-```
-docker stack deploy -c docker-compose.yml cra
-```
+`clamav-rest-api` service is published on cluster network  port 19443.
 
 You can also start `clamav-rest-api` by cloning the repo and run commands listed below:
 
@@ -62,12 +66,14 @@ npm install -D # if you want to run tests or examples
 npm start
 ```
 
+
 ##### Configuration
 
 `clamav-rest-api` needs some information to run properly. For example it needs to know where to find ClamAV. This kind of information can be provided by `.env` file or by setting environemnt variables. Example `.env` file can be find [here](./.env.example). What you need to do is to copy `.env.example` file to `.env` and edit it to provide configuration parameters which meet your needs.
 Here is a short description of those parameters:
 
-- `NODE_ENV` - describe application environment (production, development, test, etc.)
+- `APP_USER` - username who used to authenticate to `clamav-rest-api`
+- `APP_USER_PASSWORD` - password for `APP_USER`
 - `APP_PORT` - port number on which `clamav-rest-api` will listen to requests
 - `APP_FORM_KEY` - form key (element name) used when uploading files to scan (see [examples directory](examples/)). `clamav-rest-api` will only accept files uploaded with this form key.
 - `APP_MORGAN_LOG_FORMAT` - log format used by `clamav-rest-api` to display information about requests. More infor can be found [here](https://github.com/expressjs/morgan#predefined-formats)
@@ -76,24 +82,20 @@ Here is a short description of those parameters:
 - `CLAMD_IP` - ClamAV IP adress
 - `CLAMD_PORT` - ClamAV listen port
 - `CLAMD_TIMEOUT`- ClamAV timeout connection in miliseconds
+- `SRV_TIMEOUT` - `clamav-reset-api` server timeout in miliseconds
+- `UNIX_SOCKET_MODE` - use unix socket instead of TCP
+- `CERT_PATH` - SSL Certificate file path
+- `KEY_PATH` - SSL Certificate key path
 
 As stated before you can set all those parameters by setting environment variables:
 
 _Linux/MacOSX_
 
 ```
-export APP_PORT=8080
-export NODE_ENV=production
-export CLAMD_IP=localhost
-export APP_FORM_KEY=FILES
+source ENV
 npm start
 ```
 
-or
-
-```
-APP_PORT=8080 NODE_ENV=production CLAMD_IP=clamavd CLAMD_IP=localhost APP_FORM_KEY=FILES npm start
-```
 
 #### API endpoints
 
@@ -112,7 +114,7 @@ Oooops: _Wget does not currently support "multipart/form-data" for transmitting 
 ##### curl example
 
 ```
-❯ curl -s -XPOST http://localhost:3000/api/v1/scan -F FILES=@src/tests/1Mfile01.rnd -F FILES=@src/tests/eicar_com.zip | jq
+❯ curl -s -k -XPOST https://localhost:19443/api/v1/scan -F FILES=@src/tests/1Mfile01.rnd -F FILES=@src/tests/eicar_com.zip | jq
 {
   "success": true,
   "data": {
@@ -137,7 +139,7 @@ Oooops: _Wget does not currently support "multipart/form-data" for transmitting 
 ##### httpie example
 
 ```
-❯ http --form POST http://localhost:3000/api/v1/scan FILES@src/tests/1Mfile01.rnd FILES@src/tests/eicar_com.zip
+❯ https --verify no --form POST https://localhost:19443/api/v1/scan FILES@src/tests/1Mfile01.rnd FILES@src/tests/eicar_com.zip
 HTTP/1.1 200 OK
 Access-Control-Allow-Origin: *
 Connection: keep-alive
