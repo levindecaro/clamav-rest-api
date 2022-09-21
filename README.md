@@ -6,6 +6,12 @@ This product is a modification for a specific use case which deviate from the or
 https://github.com/benzino77/clamav-rest-api
 
 
+Please check the following repository for complete implementation
+1. dockerized clamavd - https://github.com/levindecaro/clamav-docker
+2. clamav signature mirror - https://github.com/levindecaro/docker-clamav-mirror
+
+
+
 ![Animation](./docs/images/animation.gif)
 
 ####  Deployment
