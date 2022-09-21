@@ -1,5 +1,5 @@
-const avConfig = {
-  debug_mode: false,
+const avConfigTcp = {
+  debug_mode: true,
   preference: 'clamdscan',
   clamdscan: {
     host: process.env.CLAMD_IP || '127.0.0.1',
@@ -9,6 +9,19 @@ const avConfig = {
     active: true,
   },
 };
+
+const avConfigSock = {
+  debug_mode: true,
+  preference: 'clamdscan',
+  clamdscan: {
+    host: false,
+    port: false,
+    timeout: parseInt(process.env.CLAMD_TIMEOUT || 60000),
+    socket: '/var/run/clamd.socket',
+    active: true,
+  },
+};
+
 
 const fuConfig = {
   useTempFiles: false,
@@ -34,6 +47,7 @@ const fuConfig = {
 };
 
 module.exports = {
-  avConfig,
+  avConfigTcp,
+  avConfigSock,
   fuConfig,
 };
