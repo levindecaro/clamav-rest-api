@@ -57,6 +57,37 @@ kubectl apply -f service.yaml
 
 `clamav-rest-api` service is published on cluster network  port 19443.
 
+
+
+## Monitor freshclamd sidecar virus signature update
+
+Compare agaist current signature set
+```
+#> dig +noall +answer current.cvd.clamav.net TXT
+current.cvd.clamav.net.	1800	IN	TXT	"0.103.7:62:26665:1663747226:1:90:49192:333"
+``` 
+
+Format: - 0.103.7: engine latest version
+        - 62:      Main cvd version
+        - 26665:   daily database
+        - :333     bytecode database      
+
+
+```
+Wed Sep 21 07:23:39 2022 -> daily.cld database is up-to-date (version: 26664, sigs: 2003594, f-level: 90, builder: raynman)
+Wed Sep 21 07:23:39 2022 -> *fc_update_database: daily.cld already up-to-date.
+Wed Sep 21 07:23:39 2022 -> *Current working dir is /usr/local/share/clamav/
+Wed Sep 21 07:23:39 2022 -> *check_for_new_database_version: Local copy of main found: main.cvd.
+Wed Sep 21 07:23:39 2022 -> *query_remote_database_version: main.cvd version from DNS: 62
+Wed Sep 21 07:23:39 2022 -> main.cvd database is up-to-date (version: 62, sigs: 6647427, f-level: 90, builder: sigmgr)
+Wed Sep 21 07:23:39 2022 -> *fc_update_database: main.cvd already up-to-date.
+Wed Sep 21 07:23:39 2022 -> *Current working dir is /usr/local/share/clamav/
+Wed Sep 21 07:23:39 2022 -> *check_for_new_database_version: Local copy of bytecode found: bytecode.cvd.
+Wed Sep 21 07:23:39 2022 -> *query_remote_database_version: bytecode.cvd version from DNS: 333
+Wed Sep 21 07:23:39 2022 -> bytecode.cvd database is up-to-date (version: 333, sigs: 92, f-level: 63, builder: awillia2)
+Wed Sep 21 07:23:39 2022 -> *fc_update_database: bytecode.cvd already up-to-date.
+```
+
 You can also start `clamav-rest-api` by cloning the repo and run commands listed below:
 
 ```
